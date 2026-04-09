@@ -1,4 +1,4 @@
-Car Service Marketplace – Cloud Technology Project
+### Car Service Marketplace – Cloud Technology Project
 
 This project was developed as the final group assignment for a Cloud Technology course. The objective was to design and deploy a scalable cloud-based application using AWS services. Working in a team of two, we built a serverless web platform that connects users with local car service providers.
 
