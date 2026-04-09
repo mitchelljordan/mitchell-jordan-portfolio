@@ -1,59 +1,87 @@
-# Car Service Marketplace – Cloud Technology Project
+## Car Service Marketplace – Cloud Technology Project
 
-This project was developed as the final group assignment for a Cloud Technology course. The objective was to design and deploy a scalable cloud-based application using AWS services. Working in a team of two, we built a serverless web platform that connects users with local car service providers.
+Car Service Marketplace is a cloud-native web application designed to connect users with local vehicle service providers. The system was built using AWS serverless technologies to create a scalable, cost-efficient platform.
+
+---
 
 ### Project Overview
+The application allows users to:
+- Search for car service providers by location  
+- View company details such as address and service information  
+- Navigate to relevant providers based on their needs  
 
-The application allows users to search for vehicle service providers by location and view relevant company information. It acts as a centralized portal, helping users identify and navigate to service providers based on their needs.
+The system acts as a centralized directory for automotive services.
+
+---
 
 ### Architecture & Technologies
 
-The system was designed using a serverless architecture with the following AWS services:
+The application was built using a serverless architecture:
 
-Amazon S3
-Hosted the static frontend.
-Enabled versioning to maintain file history
-Applied lifecycle policies to transition older data to Glacier for cost optimization
-Amazon API Gateway
-Served as the entry point for client requests
-Configured to handle GET requests
-Implemented basic rate limiting to reduce spam and abuse
-AWS Lambda
-Handled backend logic by processing API requests and retrieving data from the database
-Triggered via API Gateway events
-Enabled clear separation between frontend and backend
-Amazon DynamoDB
-Used as a NoSQL database for storing company data
-Partition Key: City
-Sort Key: Address
-Optimized for efficient location-based queries with low read capacity usage
-Key Contributions & Learning
-Designed and implemented a serverless architecture integrating multiple AWS services
-Applied cost optimization strategies such as S3 lifecycle rules and storage tiering
-Structured DynamoDB for efficient query performance
-Configured API Gateway with basic security controls (rate limiting)
-Gained hands-on experience with event-driven architecture using Lambda
-Challenges & Growth
+- **Amazon S3**
+  - Hosted the static frontend  
+  - Enabled versioning for file history  
+  - Used lifecycle policies to move older data to Glacier for cost optimization  
 
-An earlier version of this project, attempted at the beginning of the course, was unsuccessful. We struggled with:
+- **Amazon API Gateway**
+  - Served as the entry point for client requests  
+  - Configured for GET requests  
+  - Implemented rate limiting to reduce abuse  
 
-Implementing IAM role-based access control due to enviroment limitations
-Lack of understanding of API Gateway and Lambda integration
-Over-investing time in unsupported solutions
+- **AWS Lambda**
+  - Handled backend logic  
+  - Processed API requests and retrieved data from the database  
+  - Enabled separation between frontend and backend  
 
-### For the final project, we:
+- **Amazon DynamoDB**
+  - Stored company data  
+  - Partition Key: City  
+  - Sort Key: Address  
+  - Optimized for efficient location-based queries  
 
-Refocused on achievable solutions within platform constraints
-Leveraged newly learned concepts to properly integrate AWS services
-Avoided unnecessary complexity and prioritized core functionality
+![Architecture Diagram](images/diagram.png)
 
-This shift allowed us to successfully deliver a working system and demonstrate clear technical growth.
+---
 
-Additional Concepts Explored
-Designed a prototype using SNS and SQS for a secure, email-based company submission system
-Considered future expansion for full CRUD operations and more advanced filtering
-Reflection
+### My Contributions
+- Designed and implemented the serverless architecture  
+- Integrated AWS services (S3, Lambda, API Gateway, DynamoDB)  
+- Structured DynamoDB for efficient query performance  
+- Applied cost optimization strategies (lifecycle rules, storage tiering)  
+- Configured API Gateway with basic security controls  
 
-This project highlights my ability to learn from failure, adapt to technical constraints, and incrementally improve system design. It demonstrates a solid foundation in cloud development and serverless architecture.
+---
 
-While the system could be extended with additional features, it effectively showcases my understanding of how core AWS services interact to build scalable, efficient applications.
+### Key Challenges & Growth
+
+An earlier version of this project was unsuccessful due to:
+- Difficulty implementing IAM role-based access control  
+- Limited understanding of API Gateway and Lambda integration  
+- Spending time on unsupported or overly complex solutions  
+
+For the final version, we:
+- Simplified the architecture to focus on core functionality  
+- Applied newly learned cloud concepts effectively  
+- Prioritized working solutions over unnecessary complexity  
+
+This shift allowed us to successfully deploy a functional system.
+
+---
+
+### Additional Concepts Explored
+- Designed a prototype using SNS and SQS for a secure submission system  
+- Considered future expansion for full CRUD operations  
+- Planned advanced filtering and dynamic features  
+
+---
+
+### What I Learned
+- How to design and deploy serverless architectures using AWS  
+- The importance of simplicity and iteration in system design  
+- How core AWS services integrate to form scalable applications  
+- How to troubleshoot and recover from failed implementations  
+
+---
+
+### Why This Project Matters
+This project demonstrates my ability to design cloud-based systems, adapt to technical challenges, and deliver working solutions under constraints. It highlights my understanding of serverless architecture, scalability, and cost-efficient cloud development.
