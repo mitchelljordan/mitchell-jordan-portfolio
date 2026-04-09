@@ -1,0 +1,627 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  The Reading Nook - Full AWS Infrastructure Stack
+  Deploys a VPC with 2 AZs, public/private subnets, ALB, ECS cluster (FARGATE),
+  RDS PostgreSQL (Multi-AZ), ECR repositories, and Secrets Manager.
+
+# ============================================================
+# PARAMETERS
+# ============================================================
+Parameters:
+
+  EnvironmentName:
+    Type: String
+    Default: reading-nook
+    Description: Prefix for all resource names
+
+  VpcCIDR:
+    Type: String
+    Default: 10.0.0.0/16
+
+  PublicSubnet1CIDR:
+    Type: String
+    Default: 10.0.1.0/24
+
+  PublicSubnet2CIDR:
+    Type: String
+    Default: 10.0.2.0/24
+
+  PrivateSubnet1CIDR:
+    Type: String
+    Default: 10.0.3.0/24
+
+  PrivateSubnet2CIDR:
+    Type: String
+    Default: 10.0.4.0/24
+
+  DBName:
+    Type: String
+    Default: inventorydb
+
+  DBUsername:
+    Type: String
+    Default: dbadmin
+    NoEcho: true
+
+  DBPassword:
+    Type: String
+    NoEcho: true
+    MinLength: 8
+    Description: RDS master password (min 8 chars)
+
+  DBInstanceClass:
+    Type: String
+    Default: db.t3.micro
+    AllowedValues:
+      - db.t3.micro
+      - db.t3.small
+      - db.t3.medium
+
+  FrontendContainerPort:
+    Type: Number
+    Default: 3000
+    Description: Port exposed by the Next.js container
+
+  BackendContainerPort:
+    Type: Number
+    Default: 8080
+    Description: Port exposed by the Flask/waitress container (waitress binds on 8080)
+
+  DesiredCount:
+    Type: Number
+    Default: 2
+    Description: Number of ECS tasks per service (spread across AZs)
+
+  LabRoleArn:
+    Type: String
+    Description: ARN of the existing LabRole (from AWS Details in Learner Lab). e.g. arn:aws:iam::123456789012:role/LabRole
+
+  LabInstanceProfileArn:
+    Type: String
+    Description: ARN of the LabInstanceProfile for EC2 nodes. e.g. arn:aws:iam::123456789012:instance-profile/LabInstanceProfile
+
+# ============================================================
+# RESOURCES
+# ============================================================
+Resources:
+
+  # ----------------------------------------------------------
+  # VPC & NETWORKING
+  # ----------------------------------------------------------
+
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCIDR
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-vpc
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-igw
+
+  InternetGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+
+  # Public subnets (one per AZ)
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref PublicSubnet1CIDR
+      AvailabilityZone: !Select [0, !GetAZs ""]
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-public-1
+
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref PublicSubnet2CIDR
+      AvailabilityZone: !Select [1, !GetAZs ""]
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-public-2
+
+  # Private subnets (one per AZ)
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref PrivateSubnet1CIDR
+      AvailabilityZone: !Select [0, !GetAZs ""]
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-private-1
+
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref PrivateSubnet2CIDR
+      AvailabilityZone: !Select [1, !GetAZs ""]
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-private-2
+
+  # NAT Gateway (in public subnet 1 — provides outbound internet for ECS
+  # instances in private subnets: ECR pulls, ECS agent, CloudWatch, Secrets Manager)
+  NatGatewayEIP:
+    Type: AWS::EC2::EIP
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      Domain: vpc
+
+  NatGateway:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatGatewayEIP.AllocationId
+      SubnetId: !Ref PublicSubnet1
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-nat
+
+  # Route tables
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-public-rt
+
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnet1RouteTableAssoc:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet1
+      RouteTableId: !Ref PublicRouteTable
+
+  PublicSubnet2RouteTableAssoc:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet2
+      RouteTableId: !Ref PublicRouteTable
+
+  PrivateRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-private-rt
+
+  PrivateRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway
+
+  PrivateSubnet1RouteTableAssoc:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet1
+      RouteTableId: !Ref PrivateRouteTable
+
+  PrivateSubnet2RouteTableAssoc:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet2
+      RouteTableId: !Ref PrivateRouteTable
+
+  # ----------------------------------------------------------
+  # SECURITY GROUPS
+  # ----------------------------------------------------------
+
+  # ALB: accept HTTP from anywhere
+  ALBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow HTTP inbound to ALB
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-alb-sg
+
+  # ECS: accept traffic only from ALB
+  ECSSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow traffic from ALB to ECS tasks
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: !Ref FrontendContainerPort
+          ToPort: !Ref FrontendContainerPort
+          SourceSecurityGroupId: !Ref ALBSecurityGroup
+        - IpProtocol: tcp
+          FromPort: !Ref BackendContainerPort
+          ToPort: !Ref BackendContainerPort
+          SourceSecurityGroupId: !Ref ALBSecurityGroup
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-ecs-sg
+
+  # RDS: accept PostgreSQL only from ECS
+  RDSSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow PostgreSQL from ECS tasks only
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          SourceSecurityGroupId: !Ref ECSSecurityGroup
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-rds-sg
+
+  # ----------------------------------------------------------
+  # ECR REPOSITORIES
+  # ----------------------------------------------------------
+
+  # ----------------------------------------------------------
+  # SECRETS MANAGER — DB credentials
+  # ----------------------------------------------------------
+
+  DBSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub ${EnvironmentName}/db-credentials
+      Description: RDS PostgreSQL connection details
+      SecretString: !Sub |
+        {
+          "username": "${DBUsername}",
+          "password": "${DBPassword}",
+          "dbname": "${DBName}",
+          "engine": "postgres",
+          "port": 5432
+        }
+
+  # ----------------------------------------------------------
+  # RDS POSTGRESQL (Multi-AZ)
+  # Replaces Aurora. Single DBInstance with MultiAZ: true —
+  # RDS automatically provisions a synchronous standby in AZ 2
+  # and handles failover without any application code changes.
+  # ----------------------------------------------------------
+
+  DBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Subnet group for RDS across both private subnets
+      SubnetIds:
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-db-subnet-group
+
+  DBInstance:
+    Type: AWS::RDS::DBInstance
+    DeletionPolicy: Snapshot
+    Properties:
+      DBInstanceIdentifier: !Sub ${EnvironmentName}-postgres
+      DBName: !Ref DBName
+      Engine: postgres
+      EngineVersion: "17"
+      DBInstanceClass: !Ref DBInstanceClass
+      AllocatedStorage: "20"
+      StorageType: gp2
+      MasterUsername: !Ref DBUsername
+      MasterUserPassword: !Ref DBPassword
+      MultiAZ: true
+      DBSubnetGroupName: !Ref DBSubnetGroup
+      VPCSecurityGroups:
+        - !Ref RDSSecurityGroup
+      StorageEncrypted: true
+      BackupRetentionPeriod: 7
+      DeletionProtection: false
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-rds
+
+  # ----------------------------------------------------------
+  # IAM — Learner Lab uses the pre-existing LabRole.
+  # Provide LabRoleArn and LabInstanceProfileArn as stack
+  # parameters when deploying (shown in CloudFormation console).
+  # ----------------------------------------------------------
+  # APPLICATION LOAD BALANCER
+  # ----------------------------------------------------------
+
+  ALB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: !Sub ${EnvironmentName}-alb
+      Scheme: internet-facing
+      Type: application
+      SecurityGroups:
+        - !Ref ALBSecurityGroup
+      Subnets:
+        - !Ref PublicSubnet1
+        - !Ref PublicSubnet2
+
+  # Target groups
+  FrontendTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Sub ${EnvironmentName}-frontend-tg
+      Port: !Ref FrontendContainerPort
+      Protocol: HTTP
+      VpcId: !Ref VPC
+      TargetType: ip          # FARGATE tasks register by IP (awsvpc), not instance ID
+      HealthCheckPath: /
+      HealthCheckIntervalSeconds: 30
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 3
+
+  BackendTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Sub ${EnvironmentName}-backend-tg
+      Port: !Ref BackendContainerPort
+      Protocol: HTTP
+      VpcId: !Ref VPC
+      TargetType: ip          # awsvpc (FARGATE) tasks register by IP
+      HealthCheckPath: /api/books
+      HealthCheckIntervalSeconds: 30
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 3
+
+  # Listener: /api/books* → Flask, everything else → Next.js
+  ALBListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref ALB
+      Port: 80
+      Protocol: HTTP
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref FrontendTargetGroup
+
+  ALBListenerRuleAPI:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      ListenerArn: !Ref ALBListener
+      Priority: 10
+      Conditions:
+        - Field: path-pattern
+          Values:
+            - /api/books*
+      Actions:
+        - Type: forward
+          TargetGroupArn: !Ref BackendTargetGroup
+
+  # ----------------------------------------------------------
+  # ECS CLUSTER (FARGATE — no EC2 instances or ASG needed)
+  # ----------------------------------------------------------
+
+  ECSCluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: !Sub ${EnvironmentName}-cluster
+
+  # ----------------------------------------------------------
+  # CLOUDWATCH LOG GROUPS
+  # ----------------------------------------------------------
+
+  FrontendLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /ecs/${EnvironmentName}/frontend
+      RetentionInDays: 14
+
+  BackendLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /ecs/${EnvironmentName}/backend
+      RetentionInDays: 14
+
+  # ----------------------------------------------------------
+  # ECS TASK DEFINITIONS
+  # ----------------------------------------------------------
+
+  FrontendTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: !Sub ${EnvironmentName}-frontend
+      NetworkMode: awsvpc          # required for FARGATE
+      RequiresCompatibilities:
+        - FARGATE
+      ExecutionRoleArn: !Ref LabRoleArn
+      TaskRoleArn: !Ref LabRoleArn
+      Cpu: "1024"                  # task-level CPU required by FARGATE
+      Memory: "3072"               # task-level memory required by FARGATE
+      ContainerDefinitions:
+        - Name: test1
+          # Image is built by GitHub Actions with NEXT_PUBLIC_* baked in.
+          # After first CI run, this will be updated automatically.
+          Image: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/inft3200-frontend:latest
+          Essential: true
+          PortMappings:
+            - ContainerPort: !Ref FrontendContainerPort
+              HostPort: !Ref FrontendContainerPort   # awsvpc: HostPort must equal ContainerPort
+              Protocol: tcp
+          Environment:
+            # Used by Next.js server-side renders. Client-side code uses
+            # values baked into the image at build time by GitHub Actions.
+            - Name: NEXT_PUBLIC_API_URL
+              Value: !GetAtt ALB.DNSName
+            - Name: NEXT_PUBLIC_API_PORT
+              Value: "80"
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref FrontendLogGroup
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: frontend
+
+  BackendTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    DependsOn: DBInstance
+    Properties:
+      Family: !Sub ${EnvironmentName}-backend
+      NetworkMode: awsvpc          # required for FARGATE
+      RequiresCompatibilities:
+        - FARGATE
+      ExecutionRoleArn: !Ref LabRoleArn
+      TaskRoleArn: !Ref LabRoleArn
+      Cpu: "512"
+      Memory: "1024"
+      ContainerDefinitions:
+        - Name: inft3200-taskdefinition-backend
+          Image: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/inft3200-backend:latest
+          Essential: true
+          PortMappings:
+            - ContainerPort: !Ref BackendContainerPort
+              HostPort: !Ref BackendContainerPort   # awsvpc: HostPort must equal ContainerPort
+              Protocol: tcp
+          Environment:
+            # DB_HOST sourced from the single RDS instance endpoint
+            - Name: DB_HOST
+              Value: !GetAtt DBInstance.Endpoint.Address
+            - Name: FLASK_ENV
+              Value: production
+          Secrets:
+            # Individual JSON keys from Secrets Manager injected as env vars.
+            # api.py reads DB_NAME, DB_USER, DB_PASS directly.
+            - Name: DB_NAME
+              ValueFrom: !Sub "${DBSecret}:dbname::"
+            - Name: DB_USER
+              ValueFrom: !Sub "${DBSecret}:username::"
+            - Name: DB_PASS
+              ValueFrom: !Sub "${DBSecret}:password::"
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref BackendLogGroup
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: backend
+
+  # ----------------------------------------------------------
+  # ECS SERVICES
+  # ----------------------------------------------------------
+
+  FrontendService:
+    Type: AWS::ECS::Service
+    DependsOn:
+      - ALBListener
+    Properties:
+      ServiceName: inft3200-frontend-service
+      Cluster: !Ref ECSCluster
+      TaskDefinition: !Ref FrontendTaskDefinition
+      DesiredCount: !Ref DesiredCount
+      LaunchType: FARGATE
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: DISABLED
+          SecurityGroups:
+            - !Ref ECSSecurityGroup
+          Subnets:
+            - !Ref PrivateSubnet1
+            - !Ref PrivateSubnet2
+      LoadBalancers:
+        - ContainerName: test1
+          ContainerPort: !Ref FrontendContainerPort
+          TargetGroupArn: !Ref FrontendTargetGroup
+      DeploymentConfiguration:
+        MinimumHealthyPercent: 50
+        MaximumPercent: 200
+
+  BackendService:
+    Type: AWS::ECS::Service
+    DependsOn:
+      - ALBListenerRuleAPI
+    Properties:
+      ServiceName: inft3200-backend-service
+      Cluster: !Ref ECSCluster
+      TaskDefinition: !Ref BackendTaskDefinition
+      DesiredCount: !Ref DesiredCount
+      LaunchType: FARGATE
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: DISABLED
+          SecurityGroups:
+            - !Ref ECSSecurityGroup
+          Subnets:
+            - !Ref PrivateSubnet1
+            - !Ref PrivateSubnet2
+      LoadBalancers:
+        - ContainerName: inft3200-taskdefinition-backend
+          ContainerPort: !Ref BackendContainerPort
+          TargetGroupArn: !Ref BackendTargetGroup
+      DeploymentConfiguration:
+        MinimumHealthyPercent: 50
+        MaximumPercent: 200
+
+# ============================================================
+# OUTPUTS
+# ============================================================
+Outputs:
+
+  VPCId:
+    Description: VPC ID
+    Value: !Ref VPC
+    Export:
+      Name: !Sub ${EnvironmentName}-vpc-id
+
+  ALBDNSName:
+    Description: Public URL of the Application Load Balancer
+    Value: !Sub http://${ALB.DNSName}
+    Export:
+      Name: !Sub ${EnvironmentName}-alb-dns
+
+  ECSClusterName:
+    Description: ECS Cluster name (use in GitHub Actions)
+    Value: !Ref ECSCluster
+    Export:
+      Name: !Sub ${EnvironmentName}-ecs-cluster
+
+  FrontendECRUri:
+    Description: ECR URI for the frontend image
+    Value: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/inft3200-frontend
+    Export:
+      Name: !Sub ${EnvironmentName}-frontend-ecr
+
+  BackendECRUri:
+    Description: ECR URI for the backend image
+    Value: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/inft3200-backend
+    Export:
+      Name: !Sub ${EnvironmentName}-backend-ecr
+
+  DBSecretARN:
+    Description: Secrets Manager ARN for DB credentials
+    Value: !Ref DBSecret
+    Export:
+      Name: !Sub ${EnvironmentName}-db-secret-arn
+
+  RDSEndpoint:
+    Description: RDS PostgreSQL endpoint (for migration and app config)
+    Value: !GetAtt DBInstance.Endpoint.Address
+    Export:
+      Name: !Sub ${EnvironmentName}-rds-endpoint
