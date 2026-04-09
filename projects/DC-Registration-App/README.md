@@ -1,45 +1,76 @@
-# College Registration System – OOP Project
+## College Registration System – OOP Project
 
-https://github.com/mitchelljordan/DC_Registration_APP
-
-This project was developed as my final assignment for an Object-Oriented Programming course. The goal was to design a registration system for prospective college applicants while applying the four fundamental principles of object-oriented programming: inheritance, encapsulation, polymorphism, and abstraction.
+🔗 GitHub: https://github.com/mitchelljordan/DC_Registration_APP
 
 ### Overview
+Desktop-based registration system built in C# using WPF, designed to manage student applications while demonstrating core object-oriented programming principles and maintainable code structure.
 
-The system allows users to simulate the process of applying to colleges, managing applicant data, and handling validation logic. While the overall concept was straightforward, the implementation required careful structuring of classes and interactions between components.
+---
 
-### Key Concepts Applied
-Inheritance
-Used to model relationships between different types of users and application components.
-Encapsulation
-Applied to protect and manage access to data within classes.
-Polymorphism
-Enabled flexible handling of different object types through shared interfaces.
-Abstraction
-Helped simplify complex logic by exposing only necessary functionality.
-Challenges & Problem Solving
+### Detailed Description
 
-One of the biggest challenges I faced was during the debugging phase. Initially, I relied on large, overly complex functions that introduced hidden bugs and made the system difficult to maintain.
+The College Registration System is a desktop application developed in C# (WPF) to simulate the end-to-end process of student admissions. The system handles applicant validation, program selection, eligibility filtering, and persistent data storage.
 
-A critical issue emerged from deeply nested logic, where fixing one problem would introduce another. This resulted in a cycle of errors that significantly delayed completion.
+This project was primarily focused on applying and reinforcing the four core principles of object-oriented programming:
 
-### To resolve this, I refactored the codebase by:
+- **Inheritance** to model relationships between application entities  
+- **Encapsulation** to control and validate access to sensitive data (e.g., student records)  
+- **Polymorphism** to allow flexible handling of related object types  
+- **Abstraction** to simplify complex validation and business logic  
 
-Breaking down large functions into smaller, single-responsibility methods
-Reducing redundancy and improving readability
-Restructuring logic to make debugging more manageable
+---
 
-This refactor dramatically improved the stability of the application and made remaining issues easier to isolate and fix.
+### Key Features
+- Student validation system (grades, test scores, eligibility filtering)
+- Dynamic program selection based on location
+- Admission management (create, update, delete records)
+- File-based persistence using structured text/JSON
+- UI-driven workflow with WPF (event-based architecture)
 
-### Technical Takeaways
-The importance of modular design and separation of concerns
-How poor structure can significantly increase debugging complexity
-Practical application of OOP principles beyond theory
-The value of refactoring as part of the development process
-Reflection
+---
 
-While the final implementation was not perfect, it accurately reflects the skill level expected of a junior developer. More importantly, this project was a turning point in how I approach problem-solving and code organization.
+### Technical Implementation
+- Built with **C# and WPF** using an event-driven architecture  
+- Used **ObservableCollections** for real-time UI data binding  
+- Implemented structured validation logic through class constructors and helper methods  
+- Designed modular methods to separate UI logic from business rules  
+- Managed persistent storage through file I/O and serialization  
 
-It reinforced a key lesson: writing code that works is not enough—writing code that is maintainable and scalable is what truly matters.
+---
 
-This experience also highlighted what I enjoy most about programming: working through difficult problems and the satisfaction that comes with finally solving them.
+### Challenges & Refactoring
+
+A major challenge emerged during debugging due to overly complex, nested functions that made the system difficult to maintain and error-prone.
+
+To resolve this, the codebase was refactored by:
+- Breaking large methods into **single-responsibility functions**
+- Reducing redundancy and improving readability
+- Restructuring validation and control flow logic
+
+This significantly improved:
+- Debugging efficiency  
+- Code maintainability  
+- Overall system stability  
+
+---
+
+### Key Takeaways
+- Poor structure compounds complexity—especially during debugging  
+- Modular design is critical for maintainability  
+- Refactoring is not optional—it’s part of the development process  
+- Clean architecture matters as much as working code  
+
+---
+
+### Reflection
+
+This project marked a turning point in how I approach software design. It shifted my focus from simply making code work to ensuring it is structured, maintainable, and scalable.
+
+It also reinforced what I enjoy most about development: solving complex problems and iterating toward better solutions.
+
+---
+
+### Future Improvements
+- Migrate from file storage to a relational database (e.g., PostgreSQL)
+- Implement a layered architecture (UI / Service / Data)
+- Add unit testing for validation logic
