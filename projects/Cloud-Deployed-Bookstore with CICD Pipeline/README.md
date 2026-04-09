@@ -42,7 +42,7 @@ The system is built using a containerized, cloud-native architecture:
   - Automates build, push (ECR), and deployment (ECS)  
   - Triggered by code changes  
 
-![Architecture Diagram](images/architecture_diagram.png)
+![Architecture Diagram](images/architecture_diagram.drawio.png)
 
 ---
 
