@@ -10,7 +10,7 @@ To deploy the infrastructure:
 ---
 
 ### Architecture Generated
-![Architecture Diagram](images/architecture_diagram.png)
+![Architecture Diagram](images/architecture_diagram.drawio.png)
 
 ---
 
