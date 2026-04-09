@@ -1,6 +1,6 @@
 ### If you want to, you would be able to try it yourself:
 
-### First, get the.YAML file in this repo contains the entire script of the project's infrastructure that looks like this(it will take at least 20 mins to build):
+First, get the.YAML file in this repo contains the entire script of the project's infrastructure that looks like this(it will take at least 20 mins to build):
 
 ![successfully ran script](images/scriptexecute.png)
 
