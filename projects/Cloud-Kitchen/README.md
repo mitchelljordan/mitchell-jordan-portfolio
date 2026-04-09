@@ -1,12 +1,12 @@
-### Cloud Kitchen – Capstone Project
+ Cloud Kitchen – Capstone Project
 
 Cloud Kitchen is a full-stack application developed as part of my final capstone project in Durham College’s Computer Programming and Analysis program. The goal of the project was to help users make better use of their existing ingredients by generating recipes based on their pantry contents.
 
-My Role (Frontend Developer)
+### My Role (Frontend Developer)
 
 I was responsible for the design and implementation of the frontend using Flutter. My work focused on creating a responsive and user-friendly interface while ensuring seamless communication with the backend APIs.
 
-Key Contributions
+### Key Contributions
 UI/UX Design & Implementation
 Designed and built multiple screens, including pantry management, recipe search, and user preferences, with a focus on usability and clean layout.
 API Integration
@@ -25,7 +25,7 @@ Asynchronous programming and error handling
 Clean architecture with service-based abstraction
 What I Learned
 
-This project significantly improved my ability to:
+### This project significantly improved my ability to:
 
 Build scalable frontend architectures
 Work with real-world API integrations
