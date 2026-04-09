@@ -1,4 +1,4 @@
-# Backend Developer:
+# Backend Developer
 ### Baking Process and Sales:
 This was my first project as a backend dev, and my job was to set up the API routes for the frontend while maintaining security while doing it. My main task was setting up the full functionality
 from when the ingredient came in to when the product was sold. A system that required some thought was baking, and how does that turn into a product? This one operation
