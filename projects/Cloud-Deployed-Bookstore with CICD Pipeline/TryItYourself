@@ -1,0 +1,12 @@
+If you would want to you would be able to try it yourself:
+
+First get the .YAML file in this repo cantainer the entire script of the projects infastucre that looks like this(it will take at least 20 mins to build):
+
+
+Then go to this repo and add your credentials for the pipeline:
+
+https://github.com/mitchelljordan/inft3200-frontend-main
+
+
+Finally make a commit that does not break the website and and take a look at the website(this will only show the frontend this does not have the backend or the DB):
+
