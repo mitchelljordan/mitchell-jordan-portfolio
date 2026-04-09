@@ -47,8 +47,6 @@ As a backend developer, I was responsible for:
 - Fully normalized relational schema (3NF)  
 - Designed to support scalability (products, recipes, sizes)  
 
-![ERD](images/erd.png)
-
 ---
 
 ### Key Challenges
