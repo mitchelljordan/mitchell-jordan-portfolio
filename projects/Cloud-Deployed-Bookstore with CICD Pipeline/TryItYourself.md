@@ -1,24 +1,31 @@
-### If you want to, you would be able to try it yourself:
+## Try It Yourself
 
-First, get the.YAML file in this repo contains the entire script of the project's infrastructure that looks like this(it will take at least 20 mins to build):
+To deploy the infrastructure:
 
-![successfully ran script](images/scriptexecute.png)
+1. Use the provided YAML (CloudFormation) file  
+   *(~20 minutes to provision resources)*  
 
-### This script generates this architecture:
+![Script Execution](images/scriptexecute.png)
 
-![architechture diagram](images/architecture_diagram.drawio.png)
+---
 
-### Then go to this repo and add your credentials for the pipeline:
+### Architecture Generated
+![Architecture Diagram](images/architecture_diagram.png)
 
-### https://github.com/mitchelljordan/inft3200-frontend-main
+---
 
-![github actions](images/action_secrets.png)
+### CI/CD Pipeline Setup
+Configure GitHub Actions with your AWS credentials:
 
-### Learner Labs example:
+https://github.com/mitchelljordan/inft3200-frontend-main
 
-![GitHub actions credentials learner labs](images/accessKeysAWSLB.png)
+![GitHub Actions](images/action_secrets.png)
 
-### Finally, make a commit that does not break the website, and take a look at the website(this will only show the frontend; this does not have the backend or the DB):
+![AWS Credentials Example](images/accessKeysAWSLB.png)
 
-![web page](images/webpage.png)
+---
 
+### Final Application
+After deployment, access the frontend:
+
+![Web Application](images/webpage.png)
