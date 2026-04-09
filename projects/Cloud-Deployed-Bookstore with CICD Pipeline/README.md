@@ -1,4 +1,4 @@
-Cloud-Deployed Bookstore with CI/CD Pipeline
+### Cloud-Deployed Bookstore with CI/CD Pipeline
 
 Cloud-Deployed Bookstore is a full-stack web application designed to showcase modern cloud deployment practices using AWS and DevOps methodologies. The project focuses on building, containerizing, and deploying an application in a scalable and reproducible cloud environment.
 
