@@ -1,4 +1,4 @@
- Cloud Kitchen – Capstone Project
+# Cloud Kitchen – Capstone Project
 
 Cloud Kitchen is a full-stack application developed as part of my final capstone project in Durham College’s Computer Programming and Analysis program. The goal of the project was to help users make better use of their existing ingredients by generating recipes based on their pantry contents.
 
