@@ -37,11 +37,11 @@ Challenges & Growth
 
 An earlier version of this project, attempted at the beginning of the course, was unsuccessful. We struggled with:
 
-Implementing IAM role-based access control due to environment limitations
+Implementing IAM role-based access control due to enviroment limitations
 Lack of understanding of API Gateway and Lambda integration
 Over-investing time in unsupported solutions
 
-For the final project, we:
+### For the final project, we:
 
 Refocused on achievable solutions within platform constraints
 Leveraged newly learned concepts to properly integrate AWS services
